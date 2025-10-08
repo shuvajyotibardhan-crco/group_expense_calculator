@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Group Expense Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div class="container mx-auto p-4 md:p-8">
+        <header class="text-center mb-10">
+            <h1 class="text-3xl md:text-5xl font-extrabold text-blue-600 mb-2">Group Trip Expense Calculator</h1>
+            <p class="text-lg text-gray-600">Settle up with friends, the easy way.</p>
+        </header>
+
+        <div id="alert-message" class="hidden mb-4 p-4 rounded-lg text-white font-semibold"></div>
+
+        <!-- Main Content Area -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+            <!-- Members & Expenses Section -->
+            <div class="md:col-span-2 space-y-6">
+
+                <!-- Add Members Card -->
+                <div class="bg-white p-6 rounded-2xl shadow-lg border-b-4 border-blue-500">
+                    <h2 class="text-xl font-bold mb-4 text-blue-600">1. Add Group Members</h2>
+                    <form id="member-form" class="flex flex-col md:flex-row gap-4 items-end">
+                        <div class="flex-1 w-full">
+                            <label for="member-name" class="block text-sm font-medium text-gray-700">Name</label>
+                            <input type="text" id="member-name" placeholder="E.g., Alex" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 transition duration-150 ease-in-out p-2 border" required>
+                        </div>
+                        <button type="submit" class="w-full md:w-auto px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-300 ease-in-out font-semibold">Add Member</button>
+                    </form>
+                    <ul id="member-list" class="mt-4 space-y-2"></ul>
+                </div>
+
+                <!-- Add Expense Card -->
+                <div id="expense-card" class="bg-white p-6 rounded-2xl shadow-lg border-b-4 border-green-500">
+                    <h2 class="text-xl font-bold mb-4 text-green-600">2. Add an Expense</h2>
+                    <form id="expense-form" class="space-y-4">
+                        <div>
+                            <label for="expense-description" class="block text-sm font-medium text-gray-700">Description</label>
+                            <input type="text" id="expense-description" placeholder="E.g., Dinner at the beach" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-300 focus:ring focus:ring-green-200 focus:ring-opacity-50 transition duration-150 ease-in-out p-2 border" required>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label for="expense-amount" class="block text-sm font-medium text-gray-700">Amount ($)</label>
+                                <input type="number" id="expense-amount" min="0.01" step="0.01" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-300 focus:ring focus:ring-green-200 focus:ring-opacity-50 transition duration-150 ease-in-out p-2 border" required>
+                            </div>
+                            <div>
+                                <label for="expense-payer" class="block text-sm font-medium text-gray-700">Paid By</label>
+                                <select id="expense-payer" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-300 focus:ring focus:ring-green-200 focus:ring-opacity-50 transition duration-150 ease-in-out p-2 border" required></select>
+                            </div>
+                        </div>
+
+                        <!-- Split Option -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Split Method</label>
+                            <div class="flex items-center space-x-4">
+                                <label class="flex items-center">
+                                    <input type="radio" name="split-method" value="equal" checked class="form-radio text-green-600 focus:ring-green-500 transition duration-150 ease-in-out" id="split-equal">
+                                    <span class="ml-2">Equally</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="radio" name="split-method" value="unequal" class="form-radio text-green-600 focus:ring-green-500 transition duration-150 ease-in-out" id="split-unequal">
+                                    <span class="ml-2">Unequally</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Participants Checkboxes -->
+                        <div id="expense-participants-container" class="space-y-2">
+                            <label class="block text-sm font-medium text-gray-700">Participants (Check all that apply)</label>
+                        </div>
+                        
+                        <!-- Unequal Split Inputs (Dynamically added) -->
+                        <div id="unequal-split-container" class="hidden space-y-2">
+                            <h3 class="text-sm font-medium text-gray-700">Unequal Split Amounts</h3>
+                        </div>
+
+                        <button type="submit" id="expense-submit-btn" class="w-full px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition duration-300 ease-in-out font-semibold">Add Expense</button>
+                    </form>
+                </div>
+
+                <!-- Make a Repayment Card -->
+                <div class="bg-white p-6 rounded-2xl shadow-lg border-b-4 border-purple-500">
+                    <h2 class="text-xl font-bold mb-4 text-purple-600">3. Make a Repayment</h2>
+                    <form id="repayment-form" class="space-y-4">
+                        <div>
+                            <label for="repayment-payer" class="block text-sm font-medium text-gray-700">Who is paying?</label>
+                            <select id="repayment-payer" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" required></select>
+                        </div>
+                        <div>
+                            <label for="repayment-recipient" class="block text-sm font-medium text-gray-700">Who is receiving?</label>
+                            <select id="repayment-recipient" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" required></select>
+                        </div>
+                        <div>
+                            <label for="repayment-amount" class="block text-sm font-medium text-gray-700">Amount ($)</label>
+                            <input type="number" id="repayment-amount" min="0.01" step="0.01" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" required>
+                        </div>
+                        <button type="submit" class="w-full px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition duration-300 ease-in-out font-semibold">Log Repayment</button>
+                    </form>
+                </div>
+
+                <!-- Save and Load Card -->
+                <div class="bg-white p-6 rounded-2xl shadow-lg border-b-4 border-yellow-500">
+                    <h2 class="text-xl font-bold mb-4 text-yellow-600">4. Data Backup & Sharing</h2>
+                    
+                    <!-- Cloud Integration Notice -->
+                    <div class="mb-4 p-3 text-sm bg-yellow-50 border border-yellow-300 rounded-lg text-yellow-800">
+                        <p class="font-bold">Cloud Integration Notice:</p>
+                        <p>Direct Google Drive integration requires complex security setup (OAuth/Backend) which isn't possible in this single-file app. We use **local file download/upload** for secure backup and sharing instead.</p>
+                    </div>
+
+                    <div class="flex flex-col md:flex-row gap-4">
+                        <button id="save-data-btn" class="w-full px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition duration-300 ease-in-out font-semibold">Download Data Backup</button>
+                        <button id="load-data-btn" class="w-full px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition duration-300 ease-in-out font-semibold">Upload Data Backup</button>
+                        <input type="file" id="load-file-input" class="hidden" accept=".json">
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Summary & Repayments Section -->
+            <div class="space-y-6">
+                <!-- Summary Card -->
+                <div class="bg-white p-6 rounded-2xl shadow-lg border-b-4 border-yellow-500">
+                    <h2 class="text-xl font-bold mb-4 text-yellow-600">Current Balances</h2>
+                    <div id="balances-container" class="space-y-2">
+                        <p class="text-gray-500">Add members and expenses to see balances.</p>
+                    </div>
+                </div>
+
+                <!-- Expenses List Card -->
+                <div class="bg-white p-6 rounded-2xl shadow-lg border-b-4 border-gray-500">
+                    <h2 class="text-xl font-bold mb-4 text-gray-600">Expenses</h2>
+                    <div id="expenses-list" class="space-y-4 max-h-56 overflow-y-auto">
+                        <p class="text-gray-500">No expenses added yet.</p>
+                    </div>
+                </div>
+
+                <!-- Repayments List Card -->
+                <div class="bg-white p-6 rounded-2xl shadow-lg border-b-4 border-purple-500">
+                    <h2 class="text-xl font-bold mb-4 text-purple-600">Repayments</h2>
+                    <div id="repayments-list" class="space-y-4 max-h-40 overflow-y-auto">
+                        <p class="text-gray-500">No repayments made yet.</p>
+                    </div>
+                </div>
+
+
+                <!-- Settle Up Section -->
+                <div class="bg-white p-6 rounded-2xl shadow-lg border-b-4 border-red-500">
+                    <h2 class="text-xl font-bold mb-4 text-red-600">Settle Up Plan</h2>
+                    <div id="settle-up-container" class="space-y-2">
+                        <p class="text-gray-500">Calculate balances to see the settlement plan.</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Data storage
+        let members = [];
+        let expenses = [];
+        let repayments = [];
+        let editingExpenseIndex = null;
+
+        // DOM elements
+        const memberForm = document.getElementById('member-form');
+        const memberNameInput = document.getElementById('member-name');
+        const memberListUl = document.getElementById('member-list');
+
+        const expenseForm = document.getElementById('expense-form');
+        const expenseDescriptionInput = document.getElementById('expense-description');
+        const expenseAmountInput = document.getElementById('expense-amount');
+        const expensePayerSelect = document.getElementById('expense-payer');
+        const expenseParticipantsContainer = document.getElementById('expense-participants-container');
+        const unequalSplitContainer = document.getElementById('unequal-split-container');
+        const splitEqualRadio = document.getElementById('split-equal');
+        const splitUnequalRadio = document.getElementById('split-unequal');
+        const expenseSubmitBtn = document.getElementById('expense-submit-btn');
+        const expenseCard = document.getElementById('expense-card');
+
+        const repaymentForm = document.getElementById('repayment-form');
+        const repaymentPayerSelect = document.getElementById('repayment-payer');
+        const repaymentRecipientSelect = document.getElementById('repayment-recipient');
+        const repaymentAmountInput = document.getElementById('repayment-amount');
+        
+        const balancesContainer = document.getElementById('balances-container');
+        const expensesListContainer = document.getElementById('expenses-list');
+        const repaymentsListContainer = document.getElementById('repayments-list');
+        const settleUpContainer = document.getElementById('settle-up-container');
+        const alertMessage = document.getElementById('alert-message');
+
+        const saveDataBtn = document.getElementById('save-data-btn');
+        const loadDataBtn = document.getElementById('load-data-btn');
+        const loadFileInput = document.getElementById('load-file-input');
+
+        // Event Listeners
+        memberForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            addMember(memberNameInput.value);
+            memberNameInput.value = '';
+        });
+
+        expenseForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            addOrUpdateExpense();
+        });
+
+        repaymentForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            addRepayment();
+        });
+
+        splitEqualRadio.addEventListener('change', updateParticipantInputs);
+        splitUnequalRadio.addEventListener('change', updateParticipantInputs);
+
+        saveDataBtn.addEventListener('click', saveData);
+        loadDataBtn.addEventListener('click', () => loadFileInput.click());
+        loadFileInput.addEventListener('change', loadData);
+        
+        // --- Core Functions ---
+
+        /**
+         * Adds a new member to the group.
+         * @param {string} name - The name of the member.
+         */
+        function addMember(name) {
+            const trimmedName = name.trim();
+            if (trimmedName && !members.includes(trimmedName)) {
+                members.push(trimmedName);
+                showAlert(`Member '${trimmedName}' added.`, 'success');
+                updateUI();
+            } else if (members.includes(trimmedName)) {
+                showAlert(`Member '${trimmedName}' already exists.`, 'error');
+            }
+        }
+
+        /**
+         * Adds a new expense or updates an existing one based on the editing state.
+         */
+        function addOrUpdateExpense() {
+            const description = expenseDescriptionInput.value;
+            const amount = parseFloat(expenseAmountInput.value);
+            const payer = expensePayerSelect.value;
+            const splitMethod = document.querySelector('input[name="split-method"]:checked').value;
+
+            let selectedParticipants = [];
+            let shares = {};
+
+            if (splitMethod === 'equal') {
+                selectedParticipants = Array.from(expenseParticipantsContainer.querySelectorAll('input:checked')).map(input => input.value);
+                if (selectedParticipants.length === 0) {
+                    showAlert('Please select at least one participant.', 'error');
+                    return;
+                }
+                const shareAmount = amount / selectedParticipants.length;
+                selectedParticipants.forEach(p => shares[p] = shareAmount);
+            } else {
+                selectedParticipants = [...members];
+                
+                const unequalInputs = unequalSplitContainer.querySelectorAll('input[type="number"]');
+                let totalUnequalAmount = 0;
+                let valid = true;
+                
+                unequalInputs.forEach(input => {
+                    const participantName = input.id.replace('unequal-split-', '');
+                    const shareAmount = parseFloat(input.value);
+                    if (isNaN(shareAmount) || shareAmount < 0) {
+                        valid = false;
+                    }
+                    shares[participantName] = shareAmount || 0;
+                    totalUnequalAmount += shares[participantName];
+                });
+
+                if (!valid) {
+                    showAlert('Please enter valid positive numbers for unequal split.', 'error');
+                    return;
+                }
+                
+                if (Math.abs(totalUnequalAmount - amount) > 0.01) {
+                    showAlert(`Total unequal split ($${totalUnequalAmount.toFixed(2)}) does not match the total amount ($${amount.toFixed(2)}).`, 'error');
+                    return;
+                }
+            }
+            
+            const newExpense = {
+                description,
+                amount,
+                payer,
+                shares,
+                splitMethod,
+            };
+
+            if (editingExpenseIndex !== null) {
+                expenses[editingExpenseIndex] = newExpense;
+                showAlert('Expense updated successfully!', 'success');
+                editingExpenseIndex = null;
+            } else {
+                expenses.push(newExpense);
+                showAlert('Expense added successfully!', 'success');
+            }
+
+            resetExpenseForm();
+            updateUI();
+        }
+
+        /**
+         * Logs a new repayment and updates balances.
+         */
+        function addRepayment() {
+            const payer = repaymentPayerSelect.value;
+            const recipient = repaymentRecipientSelect.value;
+            const amount = parseFloat(repaymentAmountInput.value);
+
+            if (payer === recipient) {
+                showAlert('Payer and recipient cannot be the same person.', 'error');
+                return;
+            }
+            if (isNaN(amount) || amount <= 0) {
+                showAlert('Please enter a valid positive amount.', 'error');
+                return;
+            }
+
+            const newRepayment = {
+                payer,
+                recipient,
+                amount
+            };
+            repayments.push(newRepayment);
+            showAlert('Repayment logged successfully!', 'success');
+            repaymentForm.reset();
+            updateUI();
+        }
+
+        /**
+         * Sets the expense form for editing an existing expense.
+         * @param {number} index - The index of the expense to edit.
+         */
+        function editExpense(index) {
+            const expense = expenses[index];
+            if (!expense) return;
+
+            editingExpenseIndex = index;
+
+            expenseDescriptionInput.value = expense.description;
+            expenseAmountInput.value = expense.amount;
+            expensePayerSelect.value = expense.payer;
+            
+            if (expense.splitMethod === 'equal') {
+                splitEqualRadio.checked = true;
+            } else {
+                splitUnequalRadio.checked = true;
+            }
+            updateParticipantInputs();
+
+            if (expense.splitMethod === 'unequal') {
+                for (const participant in expense.shares) {
+                    const input = document.getElementById(`unequal-split-${participant}`);
+                    if (input) {
+                        input.value = expense.shares[participant];
+                    }
+                }
+            } else {
+                const checkboxes = expenseParticipantsContainer.querySelectorAll('input[type="checkbox"]');
+                checkboxes.forEach(cb => {
+                    if (expense.shares.hasOwnProperty(cb.value)) {
+                        cb.checked = true;
+                    } else {
+                        cb.checked = false;
+                    }
+                });
+            }
+
+            expenseSubmitBtn.textContent = 'Update Expense';
+            expenseSubmitBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
+            expenseSubmitBtn.classList.add('bg-orange-600', 'hover:bg-orange-700');
+            expenseCard.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        /**
+         * Removes an expense from the list.
+         * @param {number} index - The index of the expense to remove.
+         */
+        function removeExpense(index) {
+            expenses.splice(index, 1);
+            showAlert('Expense removed.', 'success');
+            resetExpenseForm();
+            updateUI();
+        }
+        
+        /**
+         * Removes a repayment from the list.
+         * @param {number} index - The index of the repayment to remove.
+         */
+        function removeRepayment(index) {
+            repayments.splice(index, 1);
+            showAlert('Repayment removed.', 'success');
+            updateUI();
+        }
+
+        /**
+         * Resets the expense form and submit button to its default state.
+         */
+        function resetExpenseForm() {
+            expenseForm.reset();
+            editingExpenseIndex = null;
+            expenseSubmitBtn.textContent = 'Add Expense';
+            expenseSubmitBtn.classList.remove('bg-orange-600', 'hover:bg-orange-700');
+            expenseSubmitBtn.classList.add('bg-green-600', 'hover:bg-green-700');
+            updateParticipantInputs();
+        }
+
+        /**
+         * Calculates the net balance for each member, considering both expenses and repayments.
+         * @returns {Object} An object mapping each member to their balance.
+         */
+        function calculateBalances() {
+            const balances = {};
+            members.forEach(m => balances[m] = 0);
+
+            expenses.forEach(expense => {
+                balances[expense.payer] += expense.amount;
+                for (const participant in expense.shares) {
+                    balances[participant] -= expense.shares[participant];
+                }
+            });
+
+            repayments.forEach(repayment => {
+                // Repayment should increase the payer's balance (less debt)
+                // and decrease the recipient's balance (less money owed to them).
+                balances[repayment.payer] += repayment.amount;
+                balances[repayment.recipient] -= repayment.amount;
+            });
+
+            return balances;
+        }
+
+        /**
+         * Simplifies the debt structure to find the most efficient settlement plan.
+         * @returns {Array} An array of transactions (e.g., [{ from: 'Alex', to: 'Chris', amount: 50 }]).
+         */
+        function simplifyDebts() {
+            const balances = calculateBalances();
+            const debtors = [];
+            const creditors = [];
+
+            for (const member in balances) {
+                if (balances[member] < -0.01) {
+                    debtors.push({ name: member, amount: -balances[member] });
+                } else if (balances[member] > 0.01) {
+                    creditors.push({ name: member, amount: balances[member] });
+                }
+            }
+            
+            debtors.sort((a, b) => b.amount - a.amount);
+            creditors.sort((a, b) => b.amount - a.amount);
+            
+            const transactions = [];
+            let i = 0;
+            let j = 0;
+
+            while (i < creditors.length && j < debtors.length) {
+                const creditor = creditors[i];
+                const debtor = debtors[j];
+                const transactionAmount = Math.min(creditor.amount, debtor.amount);
+                
+                transactions.push({
+                    from: debtor.name,
+                    to: creditor.name,
+                    amount: transactionAmount
+                });
+
+                creditor.amount -= transactionAmount;
+                debtor.amount -= transactionAmount;
+
+                if (creditor.amount < 0.01) {
+                    i++;
+                }
+                if (debtor.amount < 0.01) {
+                    j++;
+                }
+            }
+            return transactions;
+        }
+
+        /**
+         * Saves the current data (members, expenses, repayments) to a JSON file.
+         */
+        function saveData() {
+            const data = {
+                members,
+                expenses,
+                repayments
+            };
+            const jsonData = JSON.stringify(data, null, 2);
+            const blob = new Blob([jsonData], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'group-expenses-backup.json';
+            a.click();
+            URL.revokeObjectURL(url);
+            showAlert('Data saved to group-expenses-backup.json. This file contains all your data.', 'success');
+        }
+
+        /**
+         * Loads data from a user-selected JSON file.
+         * @param {Event} event - The file input change event.
+         */
+        function loadData(event) {
+            const file = event.target.files[0];
+            if (!file) {
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (data.members && data.expenses && data.repayments) {
+                        members = data.members;
+                        expenses = data.expenses;
+                        repayments = data.repayments;
+                        showAlert('Data loaded successfully!', 'success');
+                        updateUI();
+                    } else {
+                        showAlert('Invalid file format. Please load a valid group-expenses-backup.json file.', 'error');
+                    }
+                } catch (error) {
+                    showAlert('Failed to read the file. Please ensure it is a valid JSON file.', 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        /**
+         * Updates all dynamic parts of the UI.
+         */
+        function updateUI() {
+            updateMemberList();
+            updateExpenseFormMembers();
+            updateRepaymentFormMembers();
+            updateParticipantInputs();
+            updateBalancesUI();
+            updateExpensesList();
+            updateRepaymentsList();
+            updateSettleUpUI();
+        }
+
+        /**
+         * Renders the list of members in the UI.
+         */
+        function updateMemberList() {
+            memberListUl.innerHTML = '';
+            members.forEach(m => {
+                const li = document.createElement('li');
+                li.className = "flex items-center justify-between p-2 bg-gray-50 rounded-md";
+                li.innerHTML = `
+                    <span>${m}</span>
+                    <button onclick="removeMember('${m}')" class="text-red-500 hover:text-red-700 transition duration-150 ease-in-out font-bold text-sm">Remove</button>
+                `;
+                memberListUl.appendChild(li);
+            });
+        }
+
+        /**
+         * Populates the "Paid By" dropdown.
+         */
+        function updateExpenseFormMembers() {
+            expensePayerSelect.innerHTML = '';
+            if (members.length === 0) {
+                const option = document.createElement('option');
+                option.text = 'No members available';
+                expensePayerSelect.add(option);
+                expensePayerSelect.disabled = true;
+            } else {
+                expensePayerSelect.disabled = false;
+                members.forEach(m => {
+                    const option = document.createElement('option');
+                    option.value = m;
+                    option.text = m;
+                    expensePayerSelect.add(option);
+                });
+            }
+        }
+        
+        /**
+         * Populates the payer and recipient dropdowns for repayments.
+         */
+        function updateRepaymentFormMembers() {
+            const balances = calculateBalances();
+            repaymentPayerSelect.innerHTML = '';
+            repaymentRecipientSelect.innerHTML = '';
+
+            const debtors = members.filter(m => balances[m] < -0.01);
+            const creditors = members.filter(m => balances[m] > 0.01);
+
+            if (debtors.length === 0 || creditors.length === 0) {
+                const option = document.createElement('option');
+                option.text = 'No one owes anyone';
+                repaymentPayerSelect.add(option);
+                repaymentRecipientSelect.add(option);
+                repaymentPayerSelect.disabled = true;
+                repaymentRecipientSelect.disabled = true;
+                return;
+            }
+
+            repaymentPayerSelect.disabled = false;
+            repaymentRecipientSelect.disabled = false;
+            
+            // Populate payer dropdown with only debtors
+            debtors.forEach(m => {
+                const payerOption = document.createElement('option');
+                payerOption.value = m;
+                payerOption.text = m;
+                repaymentPayerSelect.add(payerOption);
+            });
+
+            // Populate recipient dropdown with only creditors
+            creditors.forEach(m => {
+                const recipientOption = document.createElement('option');
+                recipientOption.value = m;
+                recipientOption.text = m;
+                repaymentRecipientSelect.add(recipientOption);
+            });
+        }
+
+        /**
+         * Dynamically generates the participant checkboxes or unequal split inputs.
+         */
+        function updateParticipantInputs() {
+            const splitMethod = document.querySelector('input[name="split-method"]:checked').value;
+            const isUnequal = splitMethod === 'unequal';
+            
+            expenseParticipantsContainer.innerHTML = '';
+            unequalSplitContainer.innerHTML = '';
+
+            if (isUnequal) {
+                unequalSplitContainer.classList.remove('hidden');
+                expenseParticipantsContainer.classList.add('hidden');
+                
+                const unequalLabel = document.createElement('h3');
+                unequalLabel.className = 'text-sm font-medium text-gray-700';
+                unequalLabel.textContent = 'Unequal Split Amounts';
+                unequalSplitContainer.appendChild(unequalLabel);
+                
+                const participantInputs = document.createElement('div');
+                participantInputs.className = 'grid grid-cols-1 md:grid-cols-2 gap-4';
+                
+                members.forEach(m => {
+                    participantInputs.innerHTML += `
+                        <div>
+                            <label for="unequal-split-${m}" class="block text-sm font-medium text-gray-700">${m}</label>
+                            <input type="number" id="unequal-split-${m}" step="0.01" placeholder="Amount" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                        </div>
+                    `;
+                });
+                unequalSplitContainer.appendChild(participantInputs);
+            } else {
+                unequalSplitContainer.classList.add('hidden');
+                expenseParticipantsContainer.classList.remove('hidden');
+                
+                const participantsLabel = document.createElement('label');
+                participantsLabel.className = 'block text-sm font-medium text-gray-700';
+                participantsLabel.textContent = 'Participants (Check all that apply)';
+                expenseParticipantsContainer.appendChild(participantsLabel);
+
+                const gridContainer = document.createElement('div');
+                gridContainer.className = 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 mt-2';
+                
+                members.forEach(m => {
+                    const label = document.createElement('label');
+                    label.className = "flex items-center space-x-2";
+                    label.innerHTML = `
+                        <input type="checkbox" name="participants" value="${m}" checked class="form-checkbox h-4 w-4 text-green-600 rounded-sm">
+                        <span>${m}</span>
+                    `;
+                    gridContainer.appendChild(label);
+                });
+                expenseParticipantsContainer.appendChild(gridContainer);
+            }
+        }
+        
+        /**
+         * Renders the current balances in the UI.
+         */
+        function updateBalancesUI() {
+            const balances = calculateBalances();
+            balancesContainer.innerHTML = '';
+            if (Object.keys(balances).length === 0) {
+                balancesContainer.innerHTML = '<p class="text-gray-500">Add members and expenses to see balances.</p>';
+                return;
+            }
+
+            for (const member in balances) {
+                const balance = balances[member];
+                const p = document.createElement('p');
+                p.className = "p-2 rounded-md font-semibold";
+                if (balance > 0.01) {
+                    p.className += " bg-green-100 text-green-700";
+                    p.innerHTML = `${member} is owed <span class="text-lg">$${balance.toFixed(2)}</span>`;
+                } else if (balance < -0.01) {
+                    p.className += " bg-red-100 text-red-700";
+                    p.innerHTML = `${member} owes <span class="text-lg">$${(-balance).toFixed(2)}</span>`;
+                } else {
+                    p.className += " bg-gray-100 text-gray-700";
+                    p.innerHTML = `${member} is all settled up!`;
+                }
+                balancesContainer.appendChild(p);
+            }
+        }
+
+        /**
+         * Renders the list of all expenses with edit/remove buttons.
+         */
+        function updateExpensesList() {
+            expensesListContainer.innerHTML = '';
+            if (expenses.length === 0) {
+                expensesListContainer.innerHTML = '<p class="text-gray-500">No expenses added yet.</p>';
+                return;
+            }
+
+            expenses.forEach((exp, index) => {
+                const div = document.createElement('div');
+                div.className = 'p-4 bg-gray-50 rounded-md border border-gray-200';
+                
+                let shareDetails = '';
+                if (exp.splitMethod === 'equal') {
+                    const shareAmount = exp.amount / Object.keys(exp.shares).length;
+                    shareDetails = `Split equally (${Object.keys(exp.shares).length} ways): $${shareAmount.toFixed(2)} each`;
+                } else {
+                    shareDetails = 'Split unequally:';
+                    for (const participant in exp.shares) {
+                        shareDetails += ` ${participant}: $${exp.shares[participant].toFixed(2)};`;
+                    }
+                }
+                
+                div.innerHTML = `
+                    <h4 class="font-bold text-gray-700">${exp.description}</h4>
+                    <p class="text-sm text-gray-600"><strong>Paid by:</strong> ${exp.payer} ($${exp.amount.toFixed(2)})</p>
+                    <p class="text-xs text-gray-500">${shareDetails}</p>
+                    <div class="mt-2 flex space-x-2">
+                        <button onclick="editExpense(${index})" class="text-blue-500 hover:text-blue-700 font-semibold text-sm">Edit</button>
+                        <button onclick="removeExpense(${index})" class="text-red-500 hover:text-red-700 font-semibold text-sm">Remove</button>
+                    </div>
+                `;
+                expensesListContainer.appendChild(div);
+            });
+        }
+
+        /**
+         * Renders the list of all repayments with a remove button.
+         */
+        function updateRepaymentsList() {
+            repaymentsListContainer.innerHTML = '';
+            if (repayments.length === 0) {
+                repaymentsListContainer.innerHTML = '<p class="text-gray-500">No repayments made yet.</p>';
+                return;
+            }
+
+            repayments.forEach((rep, index) => {
+                const div = document.createElement('div');
+                div.className = 'p-4 bg-purple-50 rounded-md border border-purple-200 flex justify-between items-center';
+                div.innerHTML = `
+                    <p class="text-sm text-gray-700"><strong>${rep.payer}</strong> paid <strong>${rep.recipient}</strong> <span class="text-lg font-bold text-purple-700">$${rep.amount.toFixed(2)}</span></p>
+                    <button onclick="removeRepayment(${index})" class="text-red-500 hover:text-red-700 font-semibold text-sm">Remove</button>
+                `;
+                repaymentsListContainer.appendChild(div);
+            });
+        }
+
+        /**
+         * Renders the final settlement plan.
+         */
+        function updateSettleUpUI() {
+            const transactions = simplifyDebts();
+            settleUpContainer.innerHTML = '';
+            if (transactions.length === 0) {
+                settleUpContainer.innerHTML = '<p class="text-gray-500">Everyone is settled up!</p>';
+                return;
+            }
+
+            const ul = document.createElement('ul');
+            ul.className = 'space-y-2';
+            transactions.forEach(t => {
+                const li = document.createElement('li');
+                li.className = 'bg-red-50 p-3 rounded-md border border-red-200 font-semibold';
+                li.innerHTML = `<span class="text-red-700">${t.from}</span> pays <span class="text-green-700">${t.to}</span> <span class="text-lg font-bold">$${t.amount.toFixed(2)}</span>`;
+                ul.appendChild(li);
+            });
+            settleUpContainer.appendChild(ul);
+        }
+
+        /**
+         * Displays a temporary alert message.
+         * @param {string} message - The message to display.
+         * @param {string} type - 'success' or 'error'.
+         */
+        function showAlert(message, type) {
+            alertMessage.textContent = message;
+            alertMessage.classList.remove('hidden', 'bg-red-500', 'bg-green-500');
+            if (type === 'success') {
+                alertMessage.classList.add('bg-green-500');
+            } else {
+                alertMessage.classList.add('bg-red-500');
+            }
+            setTimeout(() => {
+                alertMessage.classList.add('hidden');
+            }, 3000);
+        }
+
+        /**
+         * Removes a member from the group.
+         * @param {string} name - The name of the member to remove.
+         */
+        function removeMember(name) {
+            const hasExpenses = expenses.some(exp => exp.payer === name || Object.keys(exp.shares).includes(name));
+            const hasRepayments = repayments.some(rep => rep.payer === name || rep.recipient === name);
+            if (hasExpenses || hasRepayments) {
+                showAlert(`Cannot remove '${name}' because they are involved in existing transactions.`, 'error');
+                return;
+            }
+            members = members.filter(m => m !== name);
+            showAlert(`Member '${name}' has been removed.`, 'success');
+            updateUI();
+        }
+
+        // Initial UI update
+        updateUI();
+    </script>
+</body>
+</html>
